@@ -17,6 +17,9 @@ const userSchema = new mongoose.Schema({
 	status: {
 		type: Number,
 	},
+	image: {
+		type: String,
+	}
 });
 
 const User = mongoose.model("User", userSchema);
