@@ -19,6 +19,6 @@ exports.verifyJwt = (req, res, next) => {
 		req.user = verified;
 		next();
 	} catch (error) {
-		return res.status(400).json({ message: error, error: true });
+		return res.status(400).json({ mensaje: error.message, error: true });
 	}
 };

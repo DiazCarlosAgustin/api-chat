@@ -1,6 +1,9 @@
 const express = require("express");
 
-let Router = express.Router();
+let router = express.Router();
 
+router.get("/", function (req, res) {
+	res.status(200).json({ mensaje: "SUSSESS", error: false });
+});
 
-module.exports = Router;
+module.exports = router;

@@ -1,7 +1,7 @@
 const User = require("../Model/user.model");
-const { validationResult } = require("express-validator");
 const { uploadImage } = require("./image.controller");
 const bcrypt = require("bcrypt");
+const { schemaRegister, schemaLogin } = require("../schemas/user");
 const { singJwt } = require("../middleware/auth");
 exports.getAllUserOnline = async (user_id) => {
 	try {
@@ -32,27 +32,30 @@ exports.getUser = async (user_id) => {
 };
 
 exports.createNewUser = async (req, res) => {
-	const { username, email, status } = req.body;
-
 	let img, image;
 
-	const password = await bcrypt.hash(req.body.password, 10);
-
-	const errors = validationResult(req).array();
-	if (errors.length > 0) {
-		res.status(400).json({ error: true, mensaje: errors });
+	const { error } = schemaRegister.validate(req.body);
+	if (error) {
+		return res.status(400).json({
+			error: true,
+			mensaje: error.details[0].message,
+		});
 	}
 
 	if (!req.files || Object.keys(req.files).length === 0) {
-		res.status(400).send({
+		return res.status(400).send({
 			error: true,
 			mensaje: "Debe de subir una imagen.",
 		});
 	}
 
+	const { username, email, status } = req.body;
+	const password = await bcrypt.hash(req.body.password, 10);
+
 	const user = await User.findOne({ email: email });
+
 	if (user) {
-		res.status(400).json({
+		return res.status(400).json({
 			error: true,
 			mensaje: "El email ya se encuentra registrado.",
 		});
@@ -62,8 +65,22 @@ exports.createNewUser = async (req, res) => {
 		img = await uploadImage(req.files);
 		img.error ? (image = null) : (image = img.name);
 
-		User.create({ username, email, password, status: 0, image })
-			.then((user) => res.status(200).json(user))
+		return await User.create({
+			username,
+			email,
+			password,
+			status: 0,
+			image,
+		})
+			.then((user) =>
+				res
+					.status(200)
+					.json({
+						user,
+						mensaje: "Se registro correctamente.",
+						error: false,
+					}),
+			)
 			.catch((error) => {
 				res.status(404).json({ error: true, mensaje: error });
 			});
@@ -73,22 +90,34 @@ exports.createNewUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
 	const { username, password } = req.body;
 
-	const errors = validationResult(req).array();
-	if (errors.length > 0) {
-		res.status(400).json({ errors: errors });
+	try {
+		const { error } = schemaLogin.validate(req.body);
+		if (error) {
+			return res.status(400).json({
+				error: true,
+				mensaje: error.details[0].message,
+			});
+		}
+	} catch (err) {
+		return res.status(400).json({
+			error: true,
+			mensaje: err,
+		});
 	}
 
 	const user = await User.findOne({ username: username });
 
 	if (!user) {
-		res.status(404).json({
+		return res.status(404).json({
 			error: true,
 			mensaje: "El usuario ingresado no existe.",
 		});
 	}
 
-	const validPassword = await bcrypt.compare(password, user.password);
+	const passDb = user.password;
 
+	const validPassword = await bcrypt.compareSync(password, passDb);
+	console.log(validPassword);
 	if (!validPassword) {
 		return res.status(400).json({
 			error: true,
@@ -103,10 +132,10 @@ exports.loginUser = async (req, res) => {
 		id: user.id,
 	});
 
-	res.status(200).header("auth-token", token).json({
+	return res.status(200).json({
 		error: false,
 		message: "Bienvenido",
-		data: user,
+		data: { user },
 		token: token,
 	});
 };
