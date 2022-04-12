@@ -1,5 +1,5 @@
 const {v4: uuidv4 } = require("uuid")
-exports.uploadImage = async function(files){
+exports.uploadImage = async (files) =>{
     let img, uploadPath, msg;
 
     //asignacion de valores 
