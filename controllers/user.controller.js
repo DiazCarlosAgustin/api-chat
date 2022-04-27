@@ -3,7 +3,8 @@ const { uploadImage } = require("./image.controller");
 const bcrypt = require("bcrypt");
 const { schemaRegister, schemaLogin } = require("../schemas/user");
 const { singJwt } = require("../middleware/auth");
-exports.getAllUserOnline = async (user_id) => {
+
+const getAllUserOnline = async (user_id) => {
 	try {
 		const result = await User.find({ _id: { $ne: user_id }, status: 1 });
 		return result;
@@ -12,17 +13,7 @@ exports.getAllUserOnline = async (user_id) => {
 	}
 };
 
-exports.updateStatus = async (user_id) => {
-	User.updateOne(
-		{ _id: { $eq: user_id } },
-		{ $set: { status: 1 } },
-		(err, user) => {
-			if (err) throw err;
-		},
-	);
-};
-
-exports.getUser = async (user_id) => {
+const getUser = async (user_id) => {
 	try {
 		const result = await User.find({ _id: { $eq: user_id } });
 		return result;
@@ -31,7 +22,7 @@ exports.getUser = async (user_id) => {
 	}
 };
 
-exports.createNewUser = async (req, res) => {
+const createNewUser = async (req, res) => {
 	let img, image;
 
 	const { error } = schemaRegister.validate(req.body);
@@ -73,13 +64,11 @@ exports.createNewUser = async (req, res) => {
 			image,
 		})
 			.then((user) =>
-				res
-					.status(200)
-					.json({
-						user,
-						mensaje: "Se registro correctamente.",
-						error: false,
-					}),
+				res.status(200).json({
+					user,
+					mensaje: "Se registro correctamente.",
+					error: false,
+				}),
 			)
 			.catch((error) => {
 				res.status(404).json({ error: true, mensaje: error });
@@ -87,7 +76,7 @@ exports.createNewUser = async (req, res) => {
 	}
 };
 
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
 	const { username, password } = req.body;
 
 	try {
@@ -117,7 +106,7 @@ exports.loginUser = async (req, res) => {
 	const passDb = user.password;
 
 	const validPassword = await bcrypt.compareSync(password, passDb);
-	console.log(validPassword);
+
 	if (!validPassword) {
 		return res.status(400).json({
 			error: true,
@@ -132,10 +121,20 @@ exports.loginUser = async (req, res) => {
 		id: user.id,
 	});
 
+	user.status = 1;
+	user.save();
+
 	return res.status(200).json({
 		error: false,
 		message: "Bienvenido",
 		data: { user },
 		token: token,
 	});
+};
+
+module.exports = {
+	loginUser,
+	createNewUser,
+	getUser,
+	getAllUserOnline,
 };

@@ -1,8 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const db = require("./db");
+
 const indexRoutes = require("./routes/index");
 const authRoutes = require("./routes/auth");
+const chatRoutes = require("./routes/chat");
+
 const bodyParser = require("body-parser");
 const fileUpload = require("express-fileupload");
 // const path = require("path");
@@ -22,6 +25,7 @@ app.use(bodyParser.json({ type: "application/json" }));
 
 app.use(indexRoutes);
 app.use("/auth", authRoutes);
+app.use("/chat", chatRoutes);
 app.use((req, res) => {
 	res.status(404).send("Not Found");
 });
@@ -44,101 +48,30 @@ connectDb();
 /**
  * *CONTROLLERS y MODELS
  */
-const userController = require("./controllers/user.controller");
-const chat = require("./Model/chat.model");
 
+const { connectUser } = require("./controllers/socket.controller");
+const { getChatsUsers } = require("./controllers/chat.controller");
 const server = app.listen(PORT, () => {
 	console.log(`server listen on port: ${PORT}`);
 });
 
 const io = require("socket.io")(server);
 
+global.io = io;
+
 io.on("connect", (socket) => {
-	let users = {};
-	console.log(`Connection stablished via id: ${socket.id}`);
-	socket.on("users:online", async ({ id_usuario }) => {
-		await userController.updateStatus(id_usuario);
-		console.log(socket.rooms);
-		const users = await userController.getAllUserOnline(id_usuario);
-		users[socket.id] = id_usuario;
-		io.emit("users:online", users);
+	//connect user to socket
+	//get all users online
+	socket.on("users:online", async ({ id }) => {
+		await connectUser(id);
 	});
 
 	/**
 	 * @param data Object -> {0:"id", 1:"id"} || [id, id]
-	 * TODO: async
+	 * TODO: organizar esto QL
 	 */
 	socket.on("chat:startChat", async (data) => {
-		let arr1 = [data[1], data[0]];
-
-		let completeData = {
-			users: data,
-			chatting: "",
-		};
-
-		chat.find(
-			{ $or: [{ users: data }, { users: arr1 }] },
-			(err, result) => {
-				if (err) console.log(err);
-
-				if (result.length > 0) {
-					console.log(result);
-					let sala = result[0].id;
-
-					socket.join(sala);
-
-					console.log(socket.rooms);
-					let chats = result[0].chat;
-
-					socket.emit("chat:messages", chats);
-
-					socket.on("chat:newMessage", (newMessage) => {
-						msg = {
-							msg: newMessage.msg,
-							from: newMessage.id,
-							time: Date.now(),
-						};
-
-						chat.updateOne(
-							{ $or: [{ users: data }, { users: arr1 }] },
-							{ $push: { chat: msg } },
-							(err, result) => {
-								if (err) console.log(err);
-								console.log(sala);
-								io.to(sala).emit("chat:newMessage", msg);
-							},
-						);
-					});
-				} else {
-					let newChat = new chat(completeData);
-					newChat.save((err, res) => {
-						if (err) console.log(err);
-						console.log(res);
-						let sala = res._id;
-
-						socket.join(sala);
-
-						socket.on("chat:newMessage", (newMessage) => {
-							msg = {
-								msg: newMessage.msg,
-								from: newMessage.id,
-								time: Date.now(),
-							};
-
-							chat.updateOne(
-								{ $or: [{ users: data }, { users: arr1 }] },
-								{ $push: { chat: msg } },
-								(err, result) => {
-									if (err) console.log(err);
-									console.log(result);
-									io.to(sala).emit("chat:newMessage", msg);
-								},
-							);
-						});
-					});
-				}
-			},
-		);
+		getChatsUsers(data);
 	});
 
 	// socket.on("chat:sendMessage", async ({ message, senderId, reciverId }) => {

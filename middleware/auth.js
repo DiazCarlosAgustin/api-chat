@@ -1,11 +1,11 @@
 const jwt = require("jsonwebtoken");
 const secret = process.env.SECRET_KEY || "someText";
 
-exports.singJwt = async (data) => {
+const singJwt = async (data) => {
 	return await jwt.sign(data, secret);
 };
 
-exports.verifyJwt = (req, res, next) => {
+const verifyJwt = (req, res, next) => {
 	const token = req.header("auth-token");
 	if (!token) {
 		return res
@@ -21,4 +21,9 @@ exports.verifyJwt = (req, res, next) => {
 	} catch (error) {
 		return res.status(400).json({ mensaje: error.message, error: true });
 	}
+};
+
+module.exports = {
+	singJwt,
+	verifyJwt,
 };
