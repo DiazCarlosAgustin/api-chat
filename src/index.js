@@ -2,9 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const db = require("./db");
 
-const indexRoutes = require("./routes/index");
 const authRoutes = require("./routes/auth");
 const chatRoutes = require("./routes/chat");
+const userRoutes = require("./routes/user");
 
 const bodyParser = require("body-parser");
 const fileUpload = require("express-fileupload");
@@ -12,20 +12,25 @@ const fileUpload = require("express-fileupload");
 // const http = require("http");
 require("dotenv").config();
 
-const CONNETION_URL = `mongodb+srv://admin:${process.env.DB_PASS}@cluster0.hfgs2.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+// const CONNETION_URL = `mongodb+srv://admin:${process.env.DB_PASS}@cluster0.hfgs2.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+const CONNETION_URL = "mongodb://docker:mongopw@localhost:49153";
 
 const app = express();
 const PORT = process.env.PORT || 3050;
 
-app.use(cors());
+app.use(
+	cors({
+		origin: "*",
+	}),
+);
 app.use(express.json());
 app.use(fileUpload());
-app.use(express.static("public"));
+app.use(express.static(__dirname + "/public"));
 app.use(bodyParser.json({ type: "application/json" }));
 
-app.use(indexRoutes);
 app.use("/auth", authRoutes);
 app.use("/chat", chatRoutes);
+app.use("/user", userRoutes);
 app.use((req, res) => {
 	res.status(404).send("Not Found");
 });
@@ -49,21 +54,29 @@ connectDb();
  * *CONTROLLERS y MODELS
  */
 
-const { connectUser } = require("./controllers/socket.controller");
+const { connectUser, newMessage } = require("./controllers/socket.controller");
 const { getChatsUsers } = require("./controllers/chat.controller");
+const { getUser } = require("./controllers/user.controller");
+
 const server = app.listen(PORT, () => {
 	console.log(`server listen on port: ${PORT}`);
 });
 
-const io = require("socket.io")(server);
+const io = require("socket.io")(server, {
+	cors: {
+		origin: "*",
+	},
+});
 
+app.set("socketio", io);
 global.io = io;
 
 io.on("connect", (socket) => {
 	//connect user to socket
 	//get all users online
 	socket.on("users:online", async ({ id }) => {
-		await connectUser(id);
+		const users = await connectUser(id);
+		socket.emit("users:connected", users);
 	});
 
 	/**
@@ -71,18 +84,24 @@ io.on("connect", (socket) => {
 	 * TODO: organizar esto QL
 	 */
 	socket.on("chat:startChat", async (data) => {
-		getChatsUsers(data);
+		const result = await getChatsUsers(data);
+		socket.join(result._id);
+
+		socket.emit("chat:messages", result);
 	});
 
-	// socket.on("chat:sendMessage", async ({ message, senderId, reciverId }) => {
-	// 	const user = await getUser(reciverId);
-	// 	await chatController.addMessage(message, senderId, reciverId);
-	// 	message = await messageController.getChatsByUserSender(
-	// 		senderId,
-	// 		reciverId,
-	// 	);
-	// 	io.to(user.socketId).emit("getMessage", message);
-	// });
+	socket.on("chat:sendMessage", async ({ message, senderId, reciverId }) => {
+		const user = await getUser(reciverId);
+		const msg = {
+			from: senderId,
+			to: reciverId,
+			message: message,
+		};
+		await newMessage(msg);
+		message = await getChatsUsers(senderId, reciverId);
+
+		io.to(user._id).emit("getMessage", message);
+	});
 
 	// socket.on("disconnect", () => {
 	// 	console.log("disconect");
