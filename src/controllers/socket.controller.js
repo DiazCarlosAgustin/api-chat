@@ -14,6 +14,7 @@ const newMessage = async (newMessage) => {
 	};
 	// armo el objeto de mensaje
 	const msg = {
+		send_by: newMessage.from,
 		message: newMessage.message,
 		createdAt: Date.now(),
 	};
@@ -29,7 +30,6 @@ const newMessage = async (newMessage) => {
 	let result = [];
 
 	if (chatMsg != null) {
-		console.log("entre");
 		result = await Chat.findOneAndUpdate(
 			{ _id: chatMsg._id },
 			{ $push: { chats: msg } },

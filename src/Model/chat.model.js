@@ -12,6 +12,10 @@ const chatSchema = new mongoose.Schema(
 		},
 		chats: [
 			{
+				send_by: {
+					type: String,
+					ref: "User",
+				},
 				message: {
 					type: String,
 				},

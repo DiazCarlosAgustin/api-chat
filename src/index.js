@@ -85,22 +85,22 @@ io.on("connect", (socket) => {
 	 */
 	socket.on("chat:startChat", async (data) => {
 		const result = await getChatsUsers(data);
-		socket.join(result._id);
+		const id = result[0]?.id;
+		socket.join(id);
 
-		socket.emit("chat:messages", result);
+		socket.to(id).emit("chat:messages", result);
 	});
 
-	socket.on("chat:sendMessage", async ({ message, senderId, reciverId }) => {
-		const user = await getUser(reciverId);
+	socket.on("chat:sendMessage", async ({ message, from, to }) => {
+		const user = await getUser(to);
 		const msg = {
-			from: senderId,
-			to: reciverId,
+			from: from,
+			to: to,
 			message: message,
 		};
 		await newMessage(msg);
-		message = await getChatsUsers(senderId, reciverId);
-
-		io.to(user._id).emit("getMessage", message);
+		message = await getChatsUsers({ from, to });
+		io.to(message[0].id).emit("getMessage", message);
 	});
 
 	// socket.on("disconnect", () => {
