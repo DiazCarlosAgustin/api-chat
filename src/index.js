@@ -12,7 +12,7 @@ const fileUpload = require("express-fileupload");
 // const http = require("http");
 require("dotenv").config();
 
-// const CONNETION_URL = `mongodb+srv://admin:${process.env.DB_PASS}@cluster0.hfgs2.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+//Conexion a la Db
 const CONNETION_URL = "mongodb://docker:mongopw@localhost:49153";
 
 const app = express();
@@ -25,7 +25,7 @@ app.use(
 );
 app.use(express.json());
 app.use(fileUpload());
-app.use(express.static(__dirname + "/public"));
+app.use(express.static(__dirname + "/public")); //Creacion de static files
 app.use(bodyParser.json({ type: "application/json" }));
 
 app.use("/auth", authRoutes);
@@ -53,54 +53,65 @@ connectDb();
 /**
  * *CONTROLLERS y MODELS
  */
-
 const { connectUser, newMessage } = require("./controllers/socket.controller");
 const { getChatsUsers } = require("./controllers/chat.controller");
-const { getUser } = require("./controllers/user.controller");
 
+//Levanto el server
 const server = app.listen(PORT, () => {
 	console.log(`server listen on port: ${PORT}`);
 });
 
+//Configuro los Cors de Socket
 const io = require("socket.io")(server, {
 	cors: {
 		origin: "*",
 	},
 });
 
-app.set("socketio", io);
-global.io = io;
-
+//Me conecto a socket
 io.on("connect", (socket) => {
 	//connect user to socket
-	//get all users online
+	/**
+	 * @param id user id
+	 */
 	socket.on("users:online", async ({ id }) => {
+		//Conecto el usuario
 		const users = await connectUser(id);
+
+		//Emito el evento de que se conecto un usuario
 		socket.emit("users:connected", users);
 	});
 
 	/**
-	 * @param data Object -> {0:"id", 1:"id"} || [id, id]
-	 * TODO: organizar esto QL
+	 * @param data Object -> {to, from} || {from,to}
 	 */
 	socket.on("chat:startChat", async (data) => {
+		//Obtengo los chat del los usuarios
 		const result = await getChatsUsers(data);
-		const id = result[0]?.id;
-		socket.join(id);
 
+		//Guaro el ID de la conversacion para crear la sala
+		const id = result[0]?.id;
+		//Creo la sala
+		socket.join(id);
+		//Emito el evento con todos los mensajes entre los usuarios
 		socket.to(id).emit("chat:messages", result);
 	});
 
+	/**
+	 * @param {messaje, from, to}
+	 */
 	socket.on("chat:sendMessage", async ({ message, from, to }) => {
-		const user = await getUser(to);
+		//Armo el objeto de chat
 		const msg = {
 			from: from,
 			to: to,
 			message: message,
 		};
-		await newMessage(msg);
-		message = await getChatsUsers({ from, to });
-		io.to(message[0].id).emit("getMessage", message);
+
+		//Creo el nuevo mensaje que se envio
+		const messages = await newMessage(msg);
+		//emito el evento a los que pertenecen a la conversacion
+		io.to(messages.id).emit("getMessage", messages);
 	});
 
 	// socket.on("disconnect", () => {
