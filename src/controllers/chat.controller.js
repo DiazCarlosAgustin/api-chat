@@ -23,11 +23,9 @@ const getChatsUsersReq = async (req, res) => {
 };
 
 const addMessage = async (req, res) => {
-	const socket = req.app.get("socketio");
 	const result = await newMessage(req.body);
 	res.status(200).json({
-		message: "se envio correctamente",
-		data: result,
+		result,
 	});
 };
 
