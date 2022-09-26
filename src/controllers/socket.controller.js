@@ -20,38 +20,68 @@ const newMessage = async (newMessage) => {
 	};
 
 	//Busco si hay chat entre los 2 usuarios
-	const chatMsg = await Chat.findOne({
-		$or: [
-			{ from: userChat.from, to: userChat.to },
-			{ from: userChat.to, to: userChat.from },
-		],
-	});
+	let chatMsg;
+	try {
+		chatMsg = await Chat.findOne({
+			$or: [
+				{ from: userChat.from, to: userChat.to },
+				{ from: userChat.to, to: userChat.from },
+			],
+		});
+	} catch (e) {
+		return {
+			error: e.message(),
+			message: "Error al buscar la sala.",
+			stutus: 400,
+		};
+	}
 
 	let result = [];
-
-	if (chatMsg != null) {
-		result = await Chat.findOneAndUpdate(
-			{ _id: chatMsg._id },
-			{ $push: { chats: msg } },
-		);
-	} else {
-		result = new Chat({
-			from: userChat.from,
-			to: userChat.to,
-			chats: [msg],
-		}).save();
+	try {
+		if (chatMsg != null) {
+			result = await Chat.findOneAndUpdate(
+				{ _id: chatMsg._id },
+				{
+					$push: {
+						chats: msg,
+					},
+				},
+			);
+		} else {
+			result = new Chat({
+				from: userChat.from,
+				to: userChat.to,
+				chats: [msg],
+			}).save();
+		}
+	} catch (error) {
+		return {
+			status: 400,
+			error: error,
+			message: "Error al intentar agregar el mensaje.",
+		};
 	}
-	// const result = await Chat.insert(
-	// 	{},
-	// 	{ $push: { chat: msg } },
-	// 	{ returnOriginal: false },
-	// );
-	// let result = { id: "626347f04dac1f318721f04b" };
-	// if (result?.id) {
-	// 	// console.log(socket.handshake.query.room);
-	// 	return result;
-	// }
-	return result;
+	try {
+		//funca esto pai
+		const msg = await Chat.aggregate([
+			{ $match: { _id: chatMsg._id } },
+			{ $unwind: "$chats" },
+			{ $sort: { "chats.createdAt": -1 } },
+		]).limit(1);
+
+		return {
+			id: chatMsg.id,
+			data: msg[0].chats,
+			message: "Se obtuvieron correctamente",
+			status: 200,
+		};
+	} catch (error) {
+		return {
+			status: 400,
+			error: error.message,
+			message: "Error al intentar retornar el mensaje.",
+		};
+	}
 };
 
 module.exports = {
