@@ -13,7 +13,11 @@ const fileUpload = require("express-fileupload");
 require("dotenv").config();
 
 //Conexion a la Db
-const CONNETION_URL = "mongodb://docker:mongopw@localhost:49153";
+
+// const CONNETION_URL = "mongodb://docker:mongopw@localhost:49153";
+const CONNETION_URL = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOSTNAME}:${process.env.DB_PORT}`;
+
+console.log(CONNETION_URL);
 
 const app = express();
 const PORT = process.env.PORT || 3050;
@@ -31,6 +35,7 @@ app.use(bodyParser.json({ type: "application/json" }));
 app.use("/auth", authRoutes);
 app.use("/chat", chatRoutes);
 app.use("/user", userRoutes);
+
 app.use((req, res) => {
 	res.status(404).send("Not Found");
 });

@@ -1,0 +1,40 @@
+version: '3.9'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3050:3050"
+    links:
+      - chatDb
+    volumes:
+      - .:/home/app
+    networks:
+      - network_test
+    container_name: "apiChat"
+    environment:
+      DB_USER: agus
+      DB_PASSWORD: burgger12
+      DB_PORT: 27017
+      DB_HOSTNAME: DbChat
+      APP_ENV: production
+
+  chatDb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=agus
+      - MONGO_INITDB_ROOT_PASSWORD=burgger12
+    volumes:
+      - mongodata:/data/db
+    container_name: "DbChat"
+    networks:
+      - network_test
+
+volumes:
+  mongodata:
+networks:
+  network_test:
+    external: true
