@@ -2,13 +2,25 @@ const chat = require("../Model/chat.model");
 const { newMessage } = require("./socket.controller");
 
 const getChatsUsers = async (data) => {
+	let result;
 	try {
-		const result = await chat.find({
+		result = await chat.find({
 			$or: [
 				{ from: data.from, to: data.to },
 				{ from: data.to, to: data.from },
 			],
 		});
+		if (result.length <= 0) {
+			result = await chat.create({
+				from: data.from,
+				to: data.to,
+				chats: [],
+			});
+			console.log(
+				"🚀 ~ file: chat.controller.js ~ line 19 ~ getChatsUsers ~ result",
+				result.id,
+			);
+		}
 		return result;
 	} catch (error) {
 		console.log(error);

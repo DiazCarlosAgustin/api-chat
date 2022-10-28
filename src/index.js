@@ -73,6 +73,8 @@ const io = require("socket.io")(server, {
 	},
 });
 
+global.io = io;
+
 //Me conecto a socket
 io.on("connect", (socket) => {
 	//connect user to socket
@@ -82,7 +84,6 @@ io.on("connect", (socket) => {
 	socket.on("users:online", async ({ id }) => {
 		//Conecto el usuario
 		const users = await connectUser(id);
-
 		//Emito el evento de que se conecto un usuario
 		socket.emit("users:connected", users);
 	});
@@ -95,7 +96,8 @@ io.on("connect", (socket) => {
 		const result = await getChatsUsers(data);
 
 		//Guaro el ID de la conversacion para crear la sala
-		const id = result[0]?.id;
+		const id = result[0]?.id != null ? result[0].id : result.id;
+
 		//Creo la sala
 		socket.join(id);
 		//Emito el evento con todos los mensajes entre los usuarios
@@ -115,6 +117,7 @@ io.on("connect", (socket) => {
 
 		//Creo el nuevo mensaje que se envio
 		const messages = await newMessage(msg);
+
 		//emito el evento a los que pertenecen a la conversacion
 		io.to(messages.id).emit("getMessage", messages);
 	});

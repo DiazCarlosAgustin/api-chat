@@ -186,6 +186,7 @@ const loginUser = async (req, res) => {
 	//guardo el usuario sin el row password
 	const userLoged = {
 		_id: user._id,
+		id: user.id,
 		username: user.username,
 		email: user.email,
 		status: user.status,
@@ -193,7 +194,7 @@ const loginUser = async (req, res) => {
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
 	};
-
+	global.io.emit("users:newUserLogged", userLoged);
 	//retorno el tocken y el usuario
 	return res.status(200).json({
 		error: false,
@@ -203,9 +204,34 @@ const loginUser = async (req, res) => {
 	});
 };
 
+const validEmailUser = async (email) => {
+	try {
+		return await User.findOne({ email: email });
+	} catch (error) {
+		return [];
+	}
+};
+
+const logoutUser = async (req, res) => {
+	try {
+		const log = await User.findOneAndUpdate(
+			{ _id: req.body.id },
+			{ status: 0 },
+		);
+		res.status(200).json({
+			message: "Se cerro sesion correctamente.",
+			error: false,
+		});
+	} catch (error) {
+		res.status(400).json({ message: error.message, error: true });
+	}
+};
+
 module.exports = {
 	loginUser,
 	createNewUser,
 	getUser,
 	getAllUserOnline,
+	validEmailUser,
+	logoutUser,
 };
