@@ -16,10 +16,6 @@ const getChatsUsers = async (data) => {
 				to: data.to,
 				chats: [],
 			});
-			console.log(
-				"🚀 ~ file: chat.controller.js ~ line 19 ~ getChatsUsers ~ result",
-				result.id,
-			);
 		}
 		return result;
 	} catch (error) {

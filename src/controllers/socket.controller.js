@@ -38,7 +38,7 @@ const newMessage = async (newMessage) => {
 
 	let result = [];
 	try {
-		if (chatMsg != null) {
+		if (chatMsg) {
 			result = await Chat.findOneAndUpdate(
 				{ _id: chatMsg._id },
 				{

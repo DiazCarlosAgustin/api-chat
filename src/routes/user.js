@@ -15,7 +15,6 @@ router.get("/getChat", async (req, res) => {
 });
 
 router.get("/validUser", async (req, res) => {
-	console.log(req.query);
 	const email = req.query.email;
 	const result = await validEmailUser(email);
 

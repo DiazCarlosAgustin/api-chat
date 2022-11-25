@@ -17,8 +17,6 @@ require("dotenv").config();
 // const CONNETION_URL = "mongodb://docker:mongopw@localhost:49153";
 const CONNETION_URL = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOSTNAME}:${process.env.DB_PORT}`;
 
-console.log(CONNETION_URL);
-
 const app = express();
 const PORT = process.env.PORT || 3050;
 
